@@ -1,0 +1,5 @@
+/* Hide CamScanner and Screenshot files */
+.nav-file-title[data-path*="CamScanner"],
+.nav-file-title[data-path*="Screenshot"] {
+    display: none !important;
+}

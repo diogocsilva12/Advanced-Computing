@@ -1,21 +1,27 @@
 ---
 title: "Ficha 1- Resolução"
+author: "Diogo Silva"
+date: "2025-09-30"
 output: html_notebook
 ---
 
-# Ex1
+## Exercício 1
 
 A tabela lista o número de casos de SIDA (em milhares) em 25 grandes cidades dos Estados Unidos durante o ano de 1992.
 
 <p align="center">
-  <img src="assets/tabex1.png" alt="Tabela 1" width="25%">
+
+<img src="assets/tabex1.png" alt="Tabela 1" width="25%"/>
+
 </p>
 
 Construa o histograma para descrever os dados. Calcule a média, a mediana, a amplitude e o desvio padrão. Qual a proporção de cidades com mais de 10 000 casos de SIDA em 1992?
 
+### Resolução
+
 1º temos que importar os dados, i.e, criar um vetor com os valores da tabela. Também podia ser usado um dataframe para isto.
 
-```{r}
+```{r dados1}
 xValues = c(38.3,6.2,3.7,2.6,2.1,
             14.6,5.6,3.7,2.3,2.0,
             11.9,5.5,3.4,2.2,2.0,
@@ -25,10 +31,32 @@ xValues = c(38.3,6.2,3.7,2.6,2.1,
 xValues
 ```
 
+```{r}
+#mais fácil para importar dados
+xValues = read.csv(file="ficheiros_ficha1_mais/sida_acb1.csv", sep=" ", dec=",")
+
+sida_acb1 <- read_csv("ficheiros_ficha1_mais/sida_acb1.csv", 
+ locale = locale(decimal_mark = ","))
+```
+
 2º Criar o histograma com os valores do vetor xValues.
 
 ```{r}
-histograma = hist(xValues,
+#Frequências Relativas
+histograma = hist(xValues$X1,
+     include.lowest = TRUE, right = TRUE, fuzz = 1e-7,
+     density = NULL, angle = 45, col = "lightgray", border = NULL,
+     main = paste("Número de Casos de Sida em 25 cidades"),
+     ylim = NULL,
+     xlab = "Casos de sida", ylab = "Frequência",
+     axes = TRUE, plot = TRUE, labels = FALSE,
+     nclass = NULL, warn.unused = TRUE,probability = TRUE)
+```
+
+```{r}
+
+#Frequências absolutas
+histograma1 = hist(xValues$X1,
      include.lowest = TRUE, right = TRUE, fuzz = 1e-7,
      density = NULL, angle = 45, col = "lightgray", border = NULL,
      main = paste("Número de Casos de Sida em 25 cidades"),
@@ -38,55 +66,238 @@ histograma = hist(xValues,
      nclass = NULL, warn.unused = TRUE)
 ```
 
-### Média
 ```{r}
-media = mean(xValues)
+
+#Frequências absolutas Custom
+histograma1 = hist(xValues$X1,
+     include.lowest = TRUE, right = TRUE, fuzz = 1e-7,
+     density = 30, angle = 45, col = "lightgray", border = NULL,
+     main = paste("Número de Casos de Sida em 25 cidades"),
+     ylim = NULL,
+     xlab = "Casos de sida", ylab = "Frequência",
+     axes = TRUE, plot = TRUE, labels = FALSE,
+     nclass = NULL, warn.unused = TRUE, probability = TRUE)
+```
+```{r}
+boxplot(xValues$X1, horizontal = T)
+boxplot.stats(xValues$X1)
+```
+
+
+### Média
+
+```{r}
+media = mean(xValues$X1)
 media
 ```
 
 ### Mediana
+
 ```{r}
-mediana = median(xValues)
+mediana = median(xValues$X1)
 mediana
 ```
 
-### Amplitude 
+### Amplitude
+
 Temos 2 vias para calcular a amplitude. Calculando o máximo e o mínimo e fazendo max-min. Ou utilizando o comando range()
+
 ```{r}
 
-amplitude = max(xValues) - min(xValues)
-ampl = range(xValues)
+amplitude = max(xValues$X1) - min(xValues$X1)
+ampl = range(xValues$X1)
 
 amplitude
 ampl
 ```
-### Desvio padrão 
+
+### Desvio padrão
+
 ```{r}
-desvio_padrao = sd(xValues)
+desvio_padrao = sd(xValues$X1)
 desvio_padrao
 ```
 
 ### Calcular proporção
+
+Proporção = nº casosFavoraveis / nº casosTotais
+
 Temos que calcular o nº de cidades com mais de 10000 casos logo:
+
 ```{r}
-n_maior10000 = sum(xValues > 10)
+n_maior10000 = sum(xValues$X1 > 10)
 n_maior10000
 ```
+
 A seguir calculamos o nº total de cidades, neste caso 25:
+
 ```{r}
-n_total = length(xValues)
+n_total = length(xValues$X1)
 n_total
 ```
 
 A proporção é dada pelo nº de cidades com mais de 10000 casos a dividir pelo total de cidades:
+
 ```{r}
 proporcao = n_maior10000/n_total
 proporcao
 ```
 
+```{r}
+DIQ = IQR(xValues$X1)
+DIQ
+```
 
-# Ex2 
+```{r}
+percentisEx1 = quantile(xValues$X1,c(10,25,50,75,90)/100)
+percentisEx1
+```
+
+```{r}
+summary(xValues$X1)
+```
+
+## Exercício 2
+
+```{r}
+cidades = data.frame(
+  Cidade = c("Tokyo","Seoul","Mexico City","New York","Bombay","Delhi",
+             "Sao Paulo","Los Angeles","Shanghai","Osaka","Cairo","Calcutta",
+             "Manila","Jakarta","Karachi","Canton","Dacca","Buenos Aires",
+             "Moscow","Beijing","Rio de Janeiro","Tehran","London","Istanbul",
+             "Lagos","Paris","Chicago","Shenzhen","Bangkok","Wuhan"),
+  Pais = c("Japan","South Korea","Mexico","USA","India","India",
+           "Brazil","USA","China","Japan","Egypt","India",
+           "Philippines","Indonesia","Pakistan","China","Bangladesh","Argentina",
+           "Russia","China","Brazil","Iran","Great Britain","Turkey",
+           "Nigeria","France","USA","China","Thailand","China"),
+  Pop = c(33.40,23.20,22.10,21.80,21.30,21.10,
+          20.40,17.90,17.30,16.60,15.90,15.50,
+          15.40,14.90,14.80,14.50,13.80,13.50,
+          13.40,12.70,12.20,12.10,12.00,11.70,
+          10.00,9.95,9.75,9.00,8.55,8.55)
+)
+```
+
+a)  ??
+b)  
+
+```{r}
+hist(cidades$Pop,
+     main = "Histograma da População das 30 maiores cidades (2007)",
+     xlab = "População (milhões)",
+     ylab = "Frequência",
+     col = "lightblue",
+     border = "black")
+
+```
+
+Para criar um gráfico de barras convém ordenar os valores... Para ordenar os valores tempos que "modificar" os valores da coluna pretendida
+
+```{r}
+populacaoSorted = order(cidades$Pop, decreasing = TRUE)
+
+barplot(cidades$Pop[populacaoSorted],
+        names.arg = cidades$Cidade[populacaoSorted],
+        las = 2,  # nomes horizontais
+        col = "lightgreen",
+        main = "População das 30 maiores cidades (2007)",
+        ylab = "População (milhões)")
+```
+
+Fazendo cidade\$Cidade[populacaoSorted] -\> estamos a aceder ao vetor com a ordem que definimos anteriormente
+
+## Exercicio 3 .
+
+Na tabela abaixo são apresentados os valores calóricos de 3 tipos de “hamburgers”:
+
+```{r}
+tipoHamburguer = data.frame(vegetariano = c(168,77,185.1,183.7,181.4,183.1,181.9,175.4,172.3,170.9,
+                  184.6,166.7,154.8,195.7,174.2),
+  carne = c(145.5,158.3,132.7,163.3,171.7,166.3,172.2,157.8,177.7,170.9,
+            131.1,161.8,162.9,182.1,134.7),
+  frango = c(101.1,105,85.3,117.8,99.9,121,111.3,120.4,89.5,99.5,
+             76.8,84.5,88.2,93.6,115.1))
+```
+
+Estatísticas descritivas simples
+
+```{r}
+summary(tipoHamburguer)
+```
+
+Média das colunas ig
+
+```{r}
+colMeans(tipoHamburguer)
+```
+
+Desvio Padrão por coluna
+
+```{r}
+sapply(tipoHamburguer, sd)
+```
+
+```{r}
+boxplot(tipoHamburguer, main="Valores calóricos dos hambúrgueres",
+        ylab="Calorias", col=c("lightgreen","lightblue","lightyellow"))
+```
+
+## Exercício 4
+
+a)  
+
+```{r}
+dadosBebes = read.csv(file="ficheiros_ficha1_mais/peso_bebes.csv")
+```
+
+```{r}
+sampleBebes = sample(dadosBebes$peso,15)
+```
+
+Média,Mediana, Moda (Valor que aparece + vezes), Amplitude e desvio padrão
+
+```{r}
+mediaBebes = mean(sampleBebes)
+medianaBebes = median(sampleBebes)
+#modaBebes, temos que ter uma forma de criar um contador por tipo ig...
+amplitudeBebes = max(sampleBebes) - min(sampleBebes)
+desvioPadraoBebes = sd(sampleBebes)
+
+mediaBebes
+medianaBebes
+amplitudeBebes
+desvioPadraoBebes
+```
+
+b)  Considere a amostra recolhida. A cada valor adicione 100 g. O que acontece ao valor da média e do desvio padrão? ?? da amostra ou do dataset ?
+```{r}
+dadosBebesPlus10 = Map(function(x) x+10,dadosBebes$peso)
+```
+
+
+c)  Considere a amostra recolhida. Multiplique cada valor por 2. O que acontece ao valor da média e do desvio padrão? ?? da amostra ou do dataset ?
+
+## Exercício 5
+
+a)???
+
+```{r}
+c_inter_orb = read.csv(file="ficheiros_ficha1_mais/pombos.csv", sep=" ", dec=",")
+c_inter_orb
+```
+b)
+```{r}
+summary(c_inter_orb$comp)
+```
+c)
+```
+```
 
 
 
+Nao consigo importar os dados...
 
+## Exercício 6
+
+## Exercício 7

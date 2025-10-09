@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/diogocsilva12/Documents/GitHub/Advanced-Computing/1st Year/1st Semester /Parallel Computing/2PL",
+      "program": "/Users/diogocsilva12/Documents/GitHub/Advanced-Computing/1st Year/1st Semester /Parallel Computing/2PL/build/Debug/outDebug"
+    }
+  ]
+}

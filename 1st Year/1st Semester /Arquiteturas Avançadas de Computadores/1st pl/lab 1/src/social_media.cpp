@@ -4,242 +4,193 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-#include <random>
 #include <algorithm>
 #include <chrono>
+#include <utility>
 
-#include "generation.h" 
+#include "generation.h" // deve fornecer: generate_followers_matrix(int), generate_user_features(int,int)
 
+// ----------------------
+// Utilitários
+// ----------------------
 
-
-// Compute the follower counts for each user
-std::vector<int> compute_follower_counts(const std::vector<std::vector<int>> &followers_matrix) {
-    std::vector<int> follower_counts(followers_matrix.size(), 0);
-    for (size_t u = 0; u < followers_matrix.size(); u++) {
-        // Count how many 1's (followers) this user has
-        int count = 0;
-        for (int val : followers_matrix[u]) {
-            if (val == 1) count++;
-        }
-        follower_counts[u] = count;
-    }
-    return follower_counts;
+// Soma colunas (in-degree): quantos seguem cada utilizador (seguidores)
+std::vector<int> compute_in_degree(const std::vector<std::vector<int>> &A) {
+    const int n = (int)A.size();
+    std::vector<int> colsum(n, 0);
+    for (int r = 0; r < n; ++r)
+        for (int c = 0; c < n; ++c)
+            if (A[r][c] == 1) colsum[c]++;
+    return colsum;
 }
 
-// Print top 5 and bottom 5 users based on follower counts
+// Imprime top/bottom com base no número de seguidores
 void print_top_and_bottom_users(const std::vector<std::vector<int>> &followers_matrix,
                                 const std::vector<std::vector<double>> &aggregated_features) {
-    // Compute follower counts
-    auto follower_counts = compute_follower_counts(followers_matrix);
+    auto follower_counts = compute_in_degree(followers_matrix);
 
-    // Create a vector of (user_id, count) pairs
     std::vector<std::pair<int,int>> user_counts;
-    for (size_t u = 0; u < follower_counts.size(); u++) {
+    user_counts.reserve(follower_counts.size());
+    for (int u = 0; u < (int)follower_counts.size(); ++u)
         user_counts.emplace_back(u, follower_counts[u]);
-    }
 
-    // Sort descending by follower count
     std::sort(user_counts.begin(), user_counts.end(),
               [](const auto &a, const auto &b){ return a.second > b.second; });
 
-    int n = user_counts.size();
+    const int n = (int)user_counts.size();
 
-    std::cout << "\n=== Top 5 Users with Most Followers ===\n";
+    std::cout << "\n=== Top 5 Users com MAIS seguidores (in-degree) ===\n";
     for (int i = 0; i < std::min(5, n); i++) {
         int u = user_counts[i].first;
-        std::cout << "User " << u << " (followers: " << user_counts[i].second << "): ";
-        for (double val : aggregated_features[u]) {
-            std::cout << val << " ";
-        }
+        std::cout << "User " << u << " (seguidores: " << user_counts[i].second << "): ";
+        for (double val : aggregated_features[u]) std::cout << val << " ";
         std::cout << "\n";
     }
 
-    std::cout << "\n=== Bottom 5 Users with Least Followers ===\n";
+    std::cout << "\n=== Bottom 5 Users com MENOS seguidores (in-degree) ===\n";
     for (int i = 0; i < std::min(5, n); i++) {
         int u = user_counts[n - 1 - i].first;
-        std::cout << "User " << u << " (followers: " << user_counts[n - 1 - i].second << "): ";
-        for (double val : aggregated_features[u]) {
-            std::cout << val << " ";
-        }
+        std::cout << "User " << u << " (seguidores: " << user_counts[n - 1 - i].second << "): ";
+        for (double val : aggregated_features[u]) std::cout << val << " ";
         std::cout << "\n";
     }
 }
 
-
-
-
 // ----------------------
-// Task structure
+// Task + Worker
 // ----------------------
-// Each task corresponds to processing one user row (their followers)
 struct Task {
-    int user_id; // which user to process
+    int user_id; // >=0 trabalho válido; <0 = poison pill
 };
 
-
-
-
-// ----------------------
-// Worker function
-// ----------------------
-// Worker function: compute aggregated follower features for a user
 void worker_function(
     std::queue<Task> &tasks,
     std::mutex &mtx,
     std::condition_variable &cv,
-    bool &done,
-    const std::vector<std::vector<int>> &followers_matrix, // Matrix A
-    const std::vector<std::vector<double>> &user_features, // Matrix B
-    std::vector<std::vector<double>> &aggregated_features // Matrix C can be upgrade for thread private
+    const std::vector<std::vector<int>> &followers_matrix, // A
+    const std::vector<std::vector<double>> &user_features, // B
+    std::vector<std::vector<double>> &aggregated_features  // C
 ) {
-    int num_users = (int)followers_matrix.size();
-    int feature_dim = (int)user_features[0].size();
+    const int num_users   = (int)followers_matrix.size();
+    const int feature_dim = (int)user_features[0].size();
 
-    while (!done) {
+    while (true) {
         Task task;
-        {
-            // TODO: control access to the shared queue and get a task
+        {   // obter tarefa da fila
             std::unique_lock<std::mutex> lock(mtx);
-            cv.wait(lock, [&]{ return !tasks.empty() || done; });
+            cv.wait(lock, [&]{ return !tasks.empty(); });
+            if (task.user_id < 0) break;
             task = tasks.front();
             tasks.pop();
-            lock.unlock();
-            cv.notify_all(); 
-
-            // Process the task
-            worker_function(tasks, mtx, cv, done, followers_matrix, user_features, aggregated_features);
-
         }
 
-        int user_id = task.user_id;
+        // Poison pill: terminar worker
+        //if (task.user_id < 0) break;
 
-        // We compute: aggregated_features[user_id] = followers_matrix[user_id] × user_features
+        const int user_id = task.user_id;
+
         std::vector<double> feature_sum(feature_dim, 0.0);
-        double total_follows = 0.0; // count of follows (used to normalize later)
+        double total_follows = 0.0;
 
-        // TODO: complete the loop
-        for (int other_user = 0; other_user < num_users; ++other_user) {
-            int follows = followers_matrix[user_id][other_user];
-            if (follows == 1) {
-                // This user follows 'other_user', add their features
-                for (int f = 0; f < feature_dim; ++f) {
-                    feature_sum[f] += user_features[other_user][f];
-                }
+        // A[user_id][v] == 1 significa: user_id SEGUE v (row * B)
+        for (int v = 0; v < num_users; ++v) {
+            if (followers_matrix[user_id][v] == 1) {
+                for (int f = 0; f < feature_dim; ++f)
+                    feature_sum[f] += user_features[v][f];
                 total_follows += 1.0;
             }
-
-            // Explicitly read the matrix entry
-            // follows=0 if not follower, 1 if follower
         }
-        // Compute average feature vector of followed users (if any)
+
         if (total_follows > 0.0) {
-            for (int f = 0; f < feature_dim; ++f) {
+            for (int f = 0; f < feature_dim; ++f)
                 aggregated_features[user_id][f] = feature_sum[f] / total_follows;
-            }
         } else {
-            // No followers, keep default (zero) features
-            for (int f = 0; f < feature_dim; ++f) {
-                aggregated_features[user_id][f] = 0.0;
-            }
+            std::fill(aggregated_features[user_id].begin(),
+                      aggregated_features[user_id].end(), 0.0);
         }
     }
 }
 
-
+// ----------------------
+// Master (spawn, enqueue, shutdown)
+// ----------------------
 void master_function(
     int num_users,
     int num_worker_threads,
     std::queue<Task> &tasks,
     std::mutex &mtx,
     std::condition_variable &cv,
-    bool &done,
     const std::vector<std::vector<int>> &followers_matrix,
     const std::vector<std::vector<double>> &user_features,
     std::vector<std::vector<double>> &aggregated_features,
     std::vector<std::thread> &workers)
 {
-    // Spawn worker threads
+    // Lançar workers
+    workers.reserve(num_worker_threads);
     for (int t = 0; t < num_worker_threads; ++t) {
-        std::thread th(worker_function, 
-                       std::ref(tasks), std::ref(mtx), std::ref(cv), std::ref(done),
-                       std::ref(followers_matrix), std::ref(user_features), std::ref(aggregated_features));
+        workers.emplace_back(worker_function,
+            std::ref(tasks), std::ref(mtx), std::ref(cv),
+            std::cref(followers_matrix), std::cref(user_features),
+            std::ref(aggregated_features));
     }
 
-    // Enqueue tasks
     {
         std::lock_guard<std::mutex> lock(mtx);
-        for (int u = 0; u < num_users; ++u) {
-            tasks.push({u});
-        }
+        for (int u = 0; u < num_users; ++u) tasks.push({u});
+        // Enviar poison pills para todos os workers
+        for (int t = 0; t < num_worker_threads; ++t) tasks.push({-1});
     }
     cv.notify_all();
-
-    // Wait until all tasks are consumed
-    while (!done) {
-        std::unique_lock<std::mutex> lock(mtx);
-        if (tasks.empty()) {
-            done = true;
-        }
-        lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
-    cv.notify_all(); // wake up workers so they can exit
 }
-
 
 // ----------------------
 // Main
 // ----------------------
 int main(int argc, char* argv[]) {
-    // Default values
-    int num_users = 20;      // default small network
-    int feature_dim = 3;     // features: [activity, likes, posts]
-    int num_worker_threads = 4;     // default number of worker threads
+    // Defaults
+    int num_users = 10000;            // número de utilizadores (n)
+    int feature_dim = 3;           // dimensão das features (d)
+    int num_worker_threads = 50;    // nº de threads
 
-    // If the user gave arguments, override defaults
-    if (argc >= 2) {
-        num_users = std::stoi(argv[1]);  // first argument = number of users
-    }
-    if (argc >= 3) {
-        num_worker_threads = std::stoi(argv[2]); // second argument = number of worker threads
-    }
+    // Args: <num_users> <num_worker_threads> <feature_dim>
+    if (argc >= 2) num_users = std::stoi(argv[1]);
+    if (argc >= 3) num_worker_threads = std::stoi(argv[2]);
+    if (argc >= 4) feature_dim = std::stoi(argv[3]);
 
-    std::cout << "Running with " << num_users << " users and "
-              << num_worker_threads << " worker threads.\n";
+    std::cout << "Running with " << num_users << " users, "
+              << num_worker_threads << " worker threads, feature_dim=" << feature_dim << "\n";
 
-    // Generate random followers matrix and user features
-    auto followers_matrix = generate_followers_matrix(num_users);
-    auto user_features   = generate_user_features(num_users, feature_dim);
-    std::vector<std::vector<double>> aggregated_features(num_users, std::vector<double>(feature_dim, 0.0));
+    // Dados
+    auto followers_matrix = generate_followers_matrix(num_users);       // n x n (0/1)
+    auto user_features    = generate_user_features(num_users, feature_dim); // n x d
+    std::vector<std::vector<double>> aggregated_features(
+        num_users, std::vector<double>(feature_dim, 0.0));
 
-    std::cout << "Finished matrice generation"  << "\n";
+    std::cout << "Finished matrix generation\n";
 
-    //Tasks queue
+    // Infra de tasks
     std::queue<Task> tasks;
-
-    // Shared synchronization primitives:
-    std::mutex mtx;                 
-    std::condition_variable cv;     
-    bool done = false;              
+    std::mutex mtx;
+    std::condition_variable cv;
     std::vector<std::thread> workers;
-    
+
     // Timer
     auto start_time = std::chrono::high_resolution_clock::now();
 
+    // Master–worker
     master_function(num_users, num_worker_threads,
-                    tasks, mtx, cv, done,
+                    tasks, mtx, cv,
                     followers_matrix, user_features,
                     aggregated_features, workers);
 
-    // Join all worker threads (wait for them to finish)
+    // Esperar pelos workers
     for (auto &th : workers) th.join();
 
-    // Stop timer
+    // Timer stop
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end_time - start_time;
 
-    // Show the result
+    // Output
     std::cout << "\nTotal worker computation time: " << elapsed.count() << " seconds\n";
     print_top_and_bottom_users(followers_matrix, aggregated_features);
 

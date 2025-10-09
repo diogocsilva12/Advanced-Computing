@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define N 100
+#define N 1000
+
+static int A[N][N], B[N][N], C[N][N]; // BSS/segmento global, não usa stack
+
 
 void initMatrixZero(int matrix[N][N]) {
     for(int i = 0; i < N; i++)
@@ -16,7 +19,7 @@ void initMatrixRandom(int matrix[N][N]) {
             matrix[(int)i][(int)j] = rand() % 10; // Random values between 0 and 9
 }
 
-double multiylyMatrices(int A[N][N], int B[N][N], int C[N][N]) {
+double multiplyMatrices(int A[N][N], int B[N][N], int C[N][N]) {
     initMatrixRandom(A);
     initMatrixRandom(B);
     initMatrixZero(C);
@@ -29,8 +32,7 @@ double multiylyMatrices(int A[N][N], int B[N][N], int C[N][N]) {
 }
 
 int main() {
-    int A[N][N], B[N][N], C[N][N];
-    multiylyMatrices(A, B, C);
+    multiplyMatrices(A, B, C);
     printf("Matrix multiplication completed.\n");
     return 0;
 }
