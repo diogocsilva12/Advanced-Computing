@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<thread>
+#include<omp.h>
 
 // Deixe sizeMatrix como variável (runtime), não macro
 int sizeMatrix = 512;
@@ -26,12 +26,20 @@ void init() {
     }
 }
 
-
-void matrixMult(int threadID) {
-    for(int i=threadID; i<sizeMatrix; i+=numThreads) {
-        for(int k=0; k<sizeMatrix; k++) {
-            for(int j=0; j<sizeMatrix; j++) {
-                C[i*sizeMatrix+j] += A[i*sizeMatrix+k] * B[k*sizeMatrix+j];
+// OpenMP-parallel matrix multiply (row partition):
+// C[i,j] += sum_k A[i,k] * B[k,j]
+// Parallelize outer i-loop; each thread owns distinct rows of C (no data races).
+void matrixMult_omp() {
+    const int N = sizeMatrix;
+    // i-k-j order to improve locality on C and B; hoist A[i,k] into a register
+    #pragma omp parallel for num_threads(numThreads)
+    for (int i = 0; i < N; ++i) {
+        int baseCi = i * N;
+        for (int k = 0; k < N; ++k) {
+            double aik = A[i * N + k];
+            int baseBk = k * N;
+            for (int j = 0; j < N; ++j) {
+                C[baseCi + j] += aik * B[baseBk + j];
             }
         }
     }
@@ -56,12 +64,18 @@ int main(int argc, char** argv) {
 
     alloc();
     init();
-    
-    std::thread tx[numThreads];
-    for(int i=0; i<numThreads; i++)
-        tx[i] = std::thread(matrixMult,i);
-    for(int i=0; i<numThreads; i++) //espera que todas as threads terminem
-        tx[i].join();
+
+    // Configure OpenMP threads (can also use OMP_NUM_THREADS env var)
+    omp_set_dynamic(0); // don't let runtime lower the team size
+    if (numThreads > 0) omp_set_num_threads(numThreads);
+    // Optional: report thread count
+    // #pragma omp parallel
+    // {
+    //     #pragma omp master
+    //     fprintf(stderr, "OpenMP using %d threads (requested=%d)\n", omp_get_num_threads(), numThreads);
+    // }
+
+    matrixMult_omp();
     
     printf("%f\n", C[(sizeMatrix/2)*sizeMatrix + 5]);
     return 0;

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <thread>
+#include <omp.h>
 #include <algorithm> // para std::min
 
 
@@ -48,28 +48,29 @@ void transposeB() {
 }
 
 // ------------------------------------------------------------
-// Multiplicação de matrizes paralelizada (com B transposta)
-// Cada thread processa um conjunto contíguo de linhas de A
+// Multiplicação de matrizes paralelizada com OpenMP (com B transposta)
+// Paralelizamos pelos blocos (ii,jj); cada thread acumula localmente e
+// escreve em regiões distintas de C, evitando data races.
 // ------------------------------------------------------------
-void matrixMultBlocked(int threadID) {
-    int chunk = sizeMatrix / numThreads;
-    int start = threadID * chunk;
-    int end   = (threadID == numThreads - 1) ? sizeMatrix : start + chunk;
+void matrixMultBlocked() {
+    const int N = sizeMatrix;
 
-    for (int ii = start; ii < end; ii += TILE_SIZE) {
-        for (int     jj = 0; jj < sizeMatrix; jj += TILE_SIZE) {
-            for (int kk = 0; kk < sizeMatrix; kk += TILE_SIZE) {
-                int i_max = std::min(ii + TILE_SIZE, end);
-                int j_max = std::min(jj + TILE_SIZE, sizeMatrix);
-                int k_max = std::min(kk + TILE_SIZE, sizeMatrix);
+    // Paraleliza pelos blocos de linhas e colunas
+    #pragma omp parallel for collapse(2) schedule(static)
+    for (int ii = 0; ii < N; ii += TILE_SIZE) {
+        for (int jj = 0; jj < N; jj += TILE_SIZE) {
+            for (int kk = 0; kk < N; kk += TILE_SIZE) {
+                const int i_max = std::min(ii + TILE_SIZE, N);
+                const int j_max = std::min(jj + TILE_SIZE, N);
+                const int k_max = std::min(kk + TILE_SIZE, N);
 
-                for (int i = ii; i < i_max; i++) {
-                    for (int j = jj; j < j_max; j++) {
-                        double sum = C[i * sizeMatrix + j];
-                        for (int k = kk; k < k_max; k++) {
-                            sum += A[i * sizeMatrix + k] * B_T[j * sizeMatrix + k];
+                for (int i = ii; i < i_max; ++i) {
+                    for (int j = jj; j < j_max; ++j) {
+                        double sum = C[i * N + j];
+                        for (int k = kk; k < k_max; ++k) {
+                            sum += A[i * N + k] * B_T[j * N + k];
                         }
-                        C[i * sizeMatrix + j] = sum;
+                        C[i * N + j] = sum;
                     }
                 }
             }
@@ -98,12 +99,9 @@ int main(int argc, char **argv) {
     init();
     transposeB();
 
-    std::thread tx[numThreads];
-    for (int i = 0; i < numThreads; i++)
-        tx[i] = std::thread(matrixMultBlocked, i);
-
-    for (int i = 0; i < numThreads; i++)
-        tx[i].join();
+    if (numThreads > 0) omp_set_num_threads(numThreads);
+    // fprintf(stderr, "OMP using %d threads (max=%d)\n", omp_get_max_threads(), omp_get_max_threads());
+    matrixMultBlocked();
 
     printf("C[center,5] = %f\n", C[(sizeMatrix / 2) * sizeMatrix + 5]);
 

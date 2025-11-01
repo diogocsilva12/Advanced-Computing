@@ -60,7 +60,7 @@ void matrixMult(int threadID) {
             for (int j = 0; j < sizeMatrix; j++) {    
                 sum += A[i * sizeMatrix + k] * B_T[j * sizeMatrix + k];
             }
-            C[i * sizeMatrix + j] = sum;
+            C[i * sizeMatrix + k] = sum;
         }
     }
 }

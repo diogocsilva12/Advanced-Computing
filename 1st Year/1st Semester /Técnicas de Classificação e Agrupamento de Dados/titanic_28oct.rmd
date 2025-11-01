@@ -1,0 +1,42 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+## Tratamento dos Dados
+
+```{r}
+training_data = read.csv('Regressão_mais_2024/train_Titanic.csv',header=TRUE,na.strings=c(""))
+```
+
+Temos que encontrar os valores omissos e verificar quantos valores exclusivos existem para cada variável utilizando a função sapply()
+
+```{r}
+sapply(training_data, function(x) sum(is.na(x)))
+sapply(training_data, function(x) length(unique(x)))
+```
+
+
+
+```{r}
+library(Amelia)
+```
+
+Missing values do training_data
+```{r}
+missmap(training_data)
+
+```
+A variável "Cabin" tem muitos valores omissos e por isso optámos por a eliminar. PassengerID é apenas um indicador. Utilizando a função subset(), criamos um subconjunto de dados, selecionando apenas as colunas relevantes.
+
+```{r}
+data = subset(training_data,select=c(2,3,5,6,7,8,10,12))
+missmap(data,main="Missing values vs observed")
+```
+
+# Tratamento dos valores omissos
+```{r}
+data
+```
+

@@ -1,0 +1,111 @@
+---
+title: "Ex14-10-2025 Dataset Demo"
+author: "Diogo Silva"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("faraway")
+library(faraway)
+
+data(pima,package="faraway")
+View(pima)
+pima
+```
+
+variável dependente / resposta -\> diabetes variável preditoras...
+
+Limpar o dataset Limpar os missing values
+
+```{r}
+pima$glucose [pima$glucose == 0] = NA
+pima$diastolic[pima$diastolic == 0] = NA
+pima$triceps[pima$triceps == 0] = NA
+#pima$insulin[pima$insulin == 0] = NA
+pima$bmi[pima$bmi == 0] = NA
+pima$diabetes[pima$diabetes == 0] = NA
+
+
+pima$test = factor(pima$test)
+summary(pima)
+
+
+```
+
+Temos que retirar os NA porque temos uma base de dados com muitas variaveis NA
+
+```{r}
+pima_withoutNA = na.omit((pima))
+
+
+#histograma pima
+
+hist(pima_withoutNA$diastolic,xlab = "Diastolic", main="")
+hist(pima_withoutNA$diabetes,xlab = "Diabetes", main="")
+
+plot(density(pima_withoutNA$diastolic, na.rm = TRUE), main="")
+plot(diabetes ~ diastolic, pima_withoutNA)
+plot(diabetes ~ test, pima_withoutNA)
+
+
+#Matriz de correlação entre variáveis quantitativas
+
+#install.packages("corrplot")
+library(corrplot)
+pima_q = pima_withoutNA[,-9]
+head(pima_q)
+
+
+matrix = cor(pima_q)
+#There are seven visualization methods (parameter method) in corrplot package, named 'circle', 'square', 'ellipse', 'number', 'shade', 'color', 'pie'. Color intensity of the glyph is proportional to the correlation coefficients by default color setting.
+corrplot(matrix,method = "circle")
+#There are three layout types (parameter type): 'full', 'upper' and 'lower'.
+corrplot(matrix,method = "ellipse", type="upper")
+corrplot(matrix,method = "number", type = "lower")
+
+corrplot(matrix,method = "number")
+corrplot.mixed(matrix, order = 'AOE')
+corrplot.mixed(matrix, lower = 'shade', upper = 'pie', order = 'hclust')
+
+```
+
+```{r}
+lmod = lm(diabetes ~ ., pima_withoutNA)
+coef(lmod)
+summary(lmod)
+
+lmod1 = lm(diabetes ~. , pima_q)
+summary(lmod1)
+```
+
+```{r}
+#install.packages("tidyverse")
+#install.packages("caret")
+#install.packages("leaps")
+```
+
+```{r}
+library(MASS)
+library(tidyverse)
+library(caret)
+library(leaps)
+```
+
+```{r}
+step.model = stepAIC(lmod1,direction = "both", trace = FALSE)
+summary(step.model)
+
+
+step.modelfowr = stepAIC(lmod1,direction = "forward", trace = FALSE)
+summary(step.modelfowr)
+
+step.modelback = stepAIC(lmod1,direction = "back", trace = FALSE)
+summary(step.modelback)
+```
+
+Análise de resíduos e homostecidade

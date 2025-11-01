@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" default-locale="en-US" class="in-text" demote-non-dropping-particle="sort-only">
+  <info>
+    <title>IEEE-Vancouver Hybrid</title>
+    <id>http://www.zotero.org/styles/ieee-vancouver-hybrid</id>
+    <link href="http://www.zotero.org/styles/ieee-vancouver-hybrid" rel="self"/>
+    <author>
+      <name>Diogo Silva</name>
+      <email>none</email>
+    </author>
+    <updated>2025-10-27T00:00:00+00:00</updated>
+    <category citation-format="numeric"/>
+    <category field="engineering"/>
+    <summary>IEEE-like style with Vancouver grouping and italic journal names</summary>
+  </info>
+
+  <!-- ==========================
+       IN-TEXT CITATION FORMAT
+       ========================== -->
+  <citation collapse="citation-number" delimiter=",">
+    <layout prefix="[" suffix="]" delimiter=",">
+      <text variable="citation-number"/>
+    </layout>
+  </citation>
+
+  <!-- ==========================
+       BIBLIOGRAPHY FORMAT
+       ========================== -->
+  <bibliography et-al-min="7" et-al-use-first="6" entry-spacing="0" line-spacing="1" hanging-indent="true">
+    <layout>
+      <text variable="citation-number" prefix="[" suffix="]"/>
+      <text macro="author" suffix=", "/>
+      <text variable="title" quotes="true" suffix=", "/>
+      <text variable="container-title" font-style="italic" suffix=", "/>
+      <group delimiter=", ">
+        <text variable="volume" prefix="vol. "/>
+        <text variable="page" prefix="pp. "/>
+        <text variable="issued" prefix="" suffix="."/>
+      </group>
+    </layout>
+  </bibliography>
+
+  <!-- ==========================
+       MACROS
+       ========================== -->
+  <macro name="author">
+    <names variable="author">
+      <name and="text" delimiter=", " initialize-with=". " name-as-sort-order="all"/>
+      <label form="short" prefix=", " text-case="capitalize-first"/>
+    </names>
+  </macro>
+</style>

@@ -1,0 +1,39 @@
+---
+title: "diabetesCurvasROC"
+author: "Diogo Silva"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+valores = matrix(c(9830,20,116,34),ncol=2,byrow=TRUE)
+valores
+```
+
+
+```{r}
+colnames(valores) = c("teste -","teste +")
+rownames(valores) = c("nao diabeticos","diabeticos")
+valores = as.table(valores)
+valores
+```
+
+```{r}
+addmargins(valores)
+```
+
+Teste proporção de verdadeiros positivos e verdadeiros negativos
+```{r}
+#verdadeiros negativos
+binom.test(9830,9946)
+#verdadeiros positivos
+binom.test(34,54)
+```
+
+
+
